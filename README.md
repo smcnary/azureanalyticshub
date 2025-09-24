@@ -133,6 +133,37 @@ erDiagram
     FACT_COST_DAILY ||--|| DIM_DATE : dateKey
 ```
 
+### .NET Core Architecture
+
+```mermaid
+graph TB
+    subgraph ".NET Core Projects"
+        CORE[AzureCostAnalytics.Core]
+        FUNCTIONS[AzureCostAnalytics.Functions]
+        TESTS[AzureCostAnalytics.Tests]
+    end
+    
+    subgraph "Core Services"
+        CDS[CostDataService]
+        ADS[AnomalyDetector]
+    end
+    
+    subgraph "Azure Functions"
+        ADF[AnomalyDetectionFunction]
+        BF[BudgetFunction]
+        RF[RightsizingFunction]
+    end
+    
+    CORE --> CDS
+    CORE --> ADS
+    FUNCTIONS --> ADF
+    FUNCTIONS --> BF
+    FUNCTIONS --> RF
+    FUNCTIONS --> CORE
+    TESTS --> FUNCTIONS
+    TESTS --> CORE
+```
+
 ## 🚀 Quick Start
 
 ### Prerequisites
@@ -141,6 +172,8 @@ erDiagram
 - Power BI Pro license
 - Azure CLI 2.0+
 - Bicep or Terraform
+- .NET 8.0 SDK
+- Visual Studio 2022 or VS Code with C# extension
 - Service Principal with required permissions
 
 ### Required Azure Roles
@@ -175,7 +208,7 @@ export SERVICE_PRINCIPAL_SECRET="your-sp-secret"
 # Using Bicep
 az deployment sub create \
   --location "East US" \
-  --template-file infrastructure/main.bicep \
+  --template-file infrastructure/bicep/main.bicep \
   --parameters @infrastructure/parameters/prod.json
 
 # Or using Terraform
@@ -185,7 +218,22 @@ terraform plan -var-file="prod.tfvars"
 terraform apply
 ```
 
-4. **Configure Cost Exports**
+4. **Build and test the .NET application**
+```bash
+# Restore dependencies
+dotnet restore
+
+# Build the solution
+dotnet build --configuration Release
+
+# Run tests
+dotnet test --configuration Release
+
+# Run specific test project
+dotnet test tests/AzureCostAnalytics.Tests/AzureCostAnalytics.Tests.csproj
+```
+
+5. **Configure Cost Exports**
 ```bash
 # Enable cost exports for each billing account
 az cost-management export create \
@@ -199,7 +247,7 @@ az cost-management export create \
   --schedule-recurrence-period from="2024-01-01" to="2024-12-31"
 ```
 
-5. **Deploy Data Factory pipelines**
+6. **Deploy Data Factory pipelines**
 ```bash
 # Import and publish ADF pipelines
 az datafactory pipeline create \
@@ -208,7 +256,14 @@ az datafactory pipeline create \
   --pipeline-name "cost-ingestion-pipeline"
 ```
 
-6. **Configure Power BI**
+7. **Deploy Azure Functions**
+```bash
+# Deploy Azure Functions using Azure Functions Core Tools
+cd src/AzureCostAnalytics.Functions
+func azure functionapp publish azurecostanalytics-prod-anomaly-detection --dotnet
+```
+
+8. **Configure Power BI**
 - Connect to Synapse Serverless SQL endpoint
 - Import semantic model
 - Configure incremental refresh policy

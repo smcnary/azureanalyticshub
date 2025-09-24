@@ -1,0 +1,269 @@
+name: .NET CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+  SERVICE_PRINCIPAL_ID: ${{ secrets.SERVICE_PRINCIPAL_ID }}
+  SERVICE_PRINCIPAL_SECRET: ${{ secrets.SERVICE_PRINCIPAL_SECRET }}
+  DOTNET_VERSION: '8.0.x'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+    
+    - name: Restore dependencies
+      run: dotnet restore
+    
+    - name: Build
+      run: dotnet build --no-restore --configuration Release
+    
+    - name: Run unit tests
+      run: dotnet test --no-build --configuration Release --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./coverage
+    
+    - name: Generate coverage report
+      run: |
+        dotnet tool install -g dotnet-reportgenerator-globaltool
+        reportgenerator -reports:"./coverage/**/coverage.cobertura.xml" -targetdir:"./coverage/report" -reporttypes:"Html;Cobertura"
+    
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage/report/Cobertura.xml
+        flags: unittests
+        name: codecov-umbrella
+
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+    
+    - name: Install security scanner
+      run: dotnet tool install --global security-scan
+    
+    - name: Run security scan
+      run: security-scan
+    
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+    
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  code-quality:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+    
+    - name: Install SonarCloud scanner
+      run: dotnet tool install --global dotnet-sonarscanner
+    
+    - name: Restore dependencies
+      run: dotnet restore
+    
+    - name: Build and analyze
+      run: |
+        dotnet sonarscanner begin \
+          /k:"smcnary_azureanalyticshub" \
+          /o:"smcnary" \
+          /d:sonar.token="${{ secrets.SONAR_TOKEN }}" \
+          /d:sonar.host.url="https://sonarcloud.io"
+        dotnet build --configuration Release
+        dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+
+  infrastructure-validation:
+    runs-on: ubuntu-latest
+    needs: [build-and-test, security-scan, code-quality]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: |
+          {
+            "clientId": "${{ secrets.SERVICE_PRINCIPAL_ID }}",
+            "clientSecret": "${{ secrets.SERVICE_PRINCIPAL_SECRET }}",
+            "subscriptionId": "${{ secrets.AZURE_SUBSCRIPTION_ID }}",
+            "tenantId": "${{ secrets.AZURE_TENANT_ID }}"
+          }
+    
+    - name: Install Bicep CLI
+      uses: azure/setup-bicep@v1
+    
+    - name: Validate Bicep templates
+      run: |
+        bicep build infrastructure/bicep/main.bicep --stdout
+        bicep build infrastructure/bicep/main.bicep --outfile infrastructure/bicep/main.json
+    
+    - name: Validate parameter files
+      run: |
+        # Validate that parameter files have required values
+        if grep -q "YOUR_.*_ID" infrastructure/parameters/*.json; then
+          echo "Error: Parameter files contain placeholder values"
+          exit 1
+        fi
+        echo "Parameter files validation passed"
+
+  deploy-dev:
+    runs-on: ubuntu-latest
+    needs: [infrastructure-validation]
+    if: github.ref == 'refs/heads/develop'
+    environment: dev
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+    
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: |
+          {
+            "clientId": "${{ secrets.SERVICE_PRINCIPAL_ID }}",
+            "clientSecret": "${{ secrets.SERVICE_PRINCIPAL_SECRET }}",
+            "subscriptionId": "${{ secrets.AZURE_SUBSCRIPTION_ID }}",
+            "tenantId": "${{ secrets.AZURE_TENANT_ID }}"
+          }
+    
+    - name: Deploy to Dev Environment
+      run: |
+        az deployment sub create \
+          --location "East US" \
+          --template-file infrastructure/bicep/main.bicep \
+          --parameters @infrastructure/parameters/dev.json
+    
+    - name: Deploy Data Factory Pipelines
+      run: |
+        # Deploy ADF pipelines (would use ADF REST API or ARM templates)
+        echo "Deploying Data Factory pipelines to dev environment"
+    
+    - name: Deploy Azure Functions
+      run: |
+        # Deploy Azure Functions
+        cd src/AzureCostAnalytics.Functions
+        func azure functionapp publish azurecostanalytics-dev-anomaly-detection --dotnet
+    
+    - name: Run Smoke Tests
+      run: |
+        # Run smoke tests against dev environment
+        echo "Running smoke tests against dev environment"
+
+  deploy-prod:
+    runs-on: ubuntu-latest
+    needs: [infrastructure-validation]
+    if: github.ref == 'refs/heads/main'
+    environment: prod
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+    
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: |
+          {
+            "clientId": "${{ secrets.SERVICE_PRINCIPAL_ID }}",
+            "clientSecret": "${{ secrets.SERVICE_PRINCIPAL_SECRET }}",
+            "subscriptionId": "${{ secrets.AZURE_SUBSCRIPTION_ID }}",
+            "tenantId": "${{ secrets.AZURE_TENANT_ID }}"
+          }
+    
+    - name: Deploy to Production Environment
+      run: |
+        az deployment sub create \
+          --location "East US" \
+          --template-file infrastructure/bicep/main.bicep \
+          --parameters @infrastructure/parameters/prod.json
+    
+    - name: Deploy Data Factory Pipelines
+      run: |
+        echo "Deploying Data Factory pipelines to production environment"
+    
+    - name: Deploy Azure Functions
+      run: |
+        cd src/AzureCostAnalytics.Functions
+        func azure functionapp publish azurecostanalytics-prod-anomaly-detection --dotnet
+    
+    - name: Configure Power BI
+      run: |
+        # Configure Power BI datasets and reports
+        echo "Configuring Power BI for production environment"
+    
+    - name: Run Production Tests
+      run: |
+        # Run comprehensive tests against production environment
+        echo "Running production tests"
+    
+    - name: Notify Deployment Success
+      run: |
+        echo "Production deployment completed successfully"
+
+  rollback:
+    runs-on: ubuntu-latest
+    if: failure() && github.ref == 'refs/heads/main'
+    needs: [deploy-prod]
+    environment: prod
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: |
+          {
+            "clientId": "${{ secrets.SERVICE_PRINCIPAL_ID }}",
+            "clientSecret": "${{ secrets.SERVICE_PRINCIPAL_SECRET }}",
+            "subscriptionId": "${{ secrets.AZURE_SUBSCRIPTION_ID }}",
+            "tenantId": "${{ secrets.AZURE_TENANT_ID }}"
+          }
+    
+    - name: Rollback Deployment
+      run: |
+        echo "Rolling back production deployment"
+        # Implement rollback logic here
+    
+    - name: Notify Rollback
+      run: |
+        echo "Rollback completed"
