@@ -1,0 +1,11 @@
+# Azure Functions requirements for anomaly detection
+azure-functions==1.18.0
+azure-identity==1.15.0
+azure-keyvault-secrets==4.7.0
+azure-storage-blob==12.19.0
+azure-monitor-query==1.2.0
+pandas==2.1.4
+numpy==1.24.3
+scipy==1.11.4
+python-dateutil==2.8.2
+requests==2.31.0

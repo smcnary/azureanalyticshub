@@ -1,0 +1,322 @@
+{
+  "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "budgetName": {
+      "type": "string",
+      "defaultValue": "Monthly Budget Alert"
+    },
+    "threshold": {
+      "type": "string",
+      "defaultValue": "80"
+    },
+    "teamsWebhookUrl": {
+      "type": "string",
+      "defaultValue": "@parameters('teamsWebhookUrl')"
+    },
+    "emailRecipients": {
+      "type": "string",
+      "defaultValue": "@parameters('emailRecipients')"
+    }
+  },
+  "triggers": {
+    "When_a_budget_alert_is_triggered": {
+      "type": "Request",
+      "kind": "Http",
+      "inputs": {
+        "schema": {
+          "type": "object",
+          "properties": {
+            "budgetName": {
+              "type": "string"
+            },
+            "threshold": {
+              "type": "string"
+            },
+            "currentSpend": {
+              "type": "number"
+            },
+            "budgetAmount": {
+              "type": "number"
+            },
+            "subscriptionId": {
+              "type": "string"
+            },
+            "subscriptionName": {
+              "type": "string"
+            },
+            "timeGenerated": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "budgetName",
+            "threshold",
+            "currentSpend",
+            "budgetAmount",
+            "subscriptionId"
+          ]
+        }
+      }
+    }
+  },
+  "actions": {
+    "Initialize_Budget_Alert_Data": {
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "alertMessage",
+            "type": "string",
+            "value": ""
+          },
+          {
+            "name": "severity",
+            "type": "string",
+            "value": "Medium"
+          },
+          {
+            "name": "actionRequired",
+            "type": "string",
+            "value": ""
+          }
+        ]
+      },
+      "runAfter": {}
+    },
+    "Calculate_Alert_Severity": {
+      "type": "Compose",
+      "inputs": "@if(greater(triggerBody()['currentSpend'], mul(triggerBody()['budgetAmount'], 0.9)), 'High', if(greater(triggerBody()['currentSpend'], mul(triggerBody()['budgetAmount'], 0.75)), 'Medium', 'Low'))",
+      "runAfter": {
+        "Initialize_Budget_Alert_Data": [
+          "Succeeded"
+        ]
+      }
+    },
+    "Set_Alert_Message": {
+      "type": "SetVariable",
+      "inputs": {
+        "name": "alertMessage",
+        "value": "@concat('🚨 Budget Alert: ', triggerBody()['budgetName'], '\n\n', 'Subscription: ', triggerBody()['subscriptionName'], '\n', 'Current Spend: $', triggerBody()['currentSpend'], '\n', 'Budget Amount: $', triggerBody()['budgetAmount'], '\n', 'Threshold: ', triggerBody()['threshold'], '%\n', 'Time: ', triggerBody()['timeGenerated'], '\n\n', 'Budget utilization: ', div(mul(triggerBody()['currentSpend'], 100), triggerBody()['budgetAmount']), '%')"
+      },
+      "runAfter": {
+        "Calculate_Alert_Severity": [
+          "Succeeded"
+        ]
+      }
+    },
+    "Set_Action_Required": {
+      "type": "SetVariable",
+      "inputs": {
+        "name": "actionRequired",
+        "value": "@if(greater(triggerBody()['currentSpend'], triggerBody()['budgetAmount']), 'IMMEDIATE ACTION REQUIRED: Budget exceeded!', if(greater(triggerBody()['currentSpend'], mul(triggerBody()['budgetAmount'], 0.9)), 'URGENT: Budget at 90%+ utilization', if(greater(triggerBody()['currentSpend'], mul(triggerBody()['budgetAmount'], 0.75)), 'WARNING: Budget at 75%+ utilization', 'INFO: Budget threshold reached')))"
+      },
+      "runAfter": {
+        "Set_Alert_Message": [
+          "Succeeded"
+        ]
+      }
+    },
+    "Send_Teams_Notification": {
+      "type": "Http",
+      "inputs": {
+        "method": "POST",
+        "uri": "@parameters('teamsWebhookUrl')",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "@odata.type": "Microsoft.Bot.Connector.AdaptiveCard",
+          "type": "AdaptiveCard",
+          "version": "1.0",
+          "body": [
+            {
+              "type": "TextBlock",
+              "text": "@variables('actionRequired')",
+              "weight": "Bolder",
+              "size": "Medium",
+              "color": "@if(equals(outputs('Calculate_Alert_Severity'), 'High'), 'Attention', if(equals(outputs('Calculate_Alert_Severity'), 'Medium'), 'Warning', 'Good'))"
+            },
+            {
+              "type": "TextBlock",
+              "text": "@variables('alertMessage')",
+              "wrap": true
+            },
+            {
+              "type": "FactSet",
+              "facts": [
+                {
+                  "title": "Subscription",
+                  "value": "@triggerBody()['subscriptionName']"
+                },
+                {
+                  "title": "Current Spend",
+                  "value": "@concat('$', triggerBody()['currentSpend'])"
+                },
+                {
+                  "title": "Budget Amount",
+                  "value": "@concat('$', triggerBody()['budgetAmount'])"
+                },
+                {
+                  "title": "Utilization",
+                  "value": "@concat(div(mul(triggerBody()['currentSpend'], 100), triggerBody()['budgetAmount']), '%')"
+                },
+                {
+                  "title": "Threshold",
+                  "value": "@concat(triggerBody()['threshold'], '%')"
+                },
+                {
+                  "title": "Severity",
+                  "value": "@outputs('Calculate_Alert_Severity')"
+                }
+              ]
+            }
+          ],
+          "actions": [
+            {
+              "type": "Action.OpenUrl",
+              "title": "View Cost Analysis",
+              "url": "@concat('https://portal.azure.com/#view/Microsoft_Azure_CostManagement/Menu/~/overview/subscription/', triggerBody()['subscriptionId'])"
+            },
+            {
+              "type": "Action.OpenUrl",
+              "title": "Create Support Ticket",
+              "url": "@concat('https://portal.azure.com/#create/Microsoft.Support')"
+            }
+          ]
+        }
+      },
+      "runAfter": {
+        "Set_Action_Required": [
+          "Succeeded"
+        ]
+      }
+    },
+    "Send_Email_Notification": {
+      "type": "ApiConnection",
+      "inputs": {
+        "host": {
+          "connection": {
+            "name": "@parameters('$connections')['office365']['connectionId']"
+          }
+        },
+        "method": "post",
+        "path": "/v2/Mail",
+        "body": {
+          "To": "@parameters('emailRecipients')",
+          "Subject": "@concat('[', outputs('Calculate_Alert_Severity'), '] Budget Alert: ', triggerBody()['budgetName'], ' - ', triggerBody()['subscriptionName'])",
+          "Body": "@concat('<h2>', variables('actionRequired'), '</h2><br><br>', replace(variables('alertMessage'), '\n', '<br>'), '<br><br><h3>Recommended Actions:</h3><ul><li>Review recent cost changes in the Azure portal</li><li>Check for new or modified resources</li><li>Consider implementing cost controls</li><li>Review reserved instances and savings plans</li></ul><br><p><a href=\"https://portal.azure.com/#view/Microsoft_Azure_CostManagement/Menu/~/overview/subscription/', triggerBody()['subscriptionId'], '\">View Cost Analysis Dashboard</a></p>')",
+          "Importance": "@if(equals(outputs('Calculate_Alert_Severity'), 'High'), 'High', 'Normal')"
+        }
+      },
+      "runAfter": {
+        "Send_Teams_Notification": [
+          "Succeeded",
+          "Failed"
+        ]
+      }
+    },
+    "Create_Azure_DevOps_Work_Item": {
+      "type": "Http",
+      "inputs": {
+        "method": "POST",
+        "uri": "@concat('https://dev.azure.com/', parameters('azureDevOpsOrganization'), '/', parameters('azureDevOpsProject'), '/_apis/wit/workitems/$', if(equals(outputs('Calculate_Alert_Severity'), 'High'), 'Bug', 'Task'), '?api-version=6.0')",
+        "headers": {
+          "Content-Type": "application/json-patch+json",
+          "Authorization": "@concat('Basic ', base64(concat(parameters('azureDevOpsUsername'), ':', parameters('azureDevOpsToken'))))"
+        },
+        "body": [
+          {
+            "op": "add",
+            "path": "/fields/System.Title",
+            "value": "@concat('Budget Alert: ', triggerBody()['budgetName'], ' - ', triggerBody()['subscriptionName'])"
+          },
+          {
+            "op": "add",
+            "path": "/fields/System.Description",
+            "value": "@concat('Budget alert triggered for subscription: ', triggerBody()['subscriptionName'], '\n\nDetails:\n- Budget: ', triggerBody()['budgetName'], '\n- Current Spend: $', triggerBody()['currentSpend'], '\n- Budget Amount: $', triggerBody()['budgetAmount'], '\n- Utilization: ', div(mul(triggerBody()['currentSpend'], 100), triggerBody()['budgetAmount']), '%\n- Threshold: ', triggerBody()['threshold'], '%\n- Severity: ', outputs('Calculate_Alert_Severity'), '\n- Time: ', triggerBody()['timeGenerated'], '\n\nAction Required: ', variables('actionRequired'))"
+          },
+          {
+            "op": "add",
+            "path": "/fields/Microsoft.VSTS.Common.Priority",
+            "value": "@if(equals(outputs('Calculate_Alert_Severity'), 'High'), '1', if(equals(outputs('Calculate_Alert_Severity'), 'Medium'), '2', '3'))"
+          },
+          {
+            "op": "add",
+            "path": "/fields/System.AreaPath",
+            "value": "@concat(parameters('azureDevOpsProject'), '\\FinOps')"
+          },
+          {
+            "op": "add",
+            "path": "/fields/System.IterationPath",
+            "value": "@concat(parameters('azureDevOpsProject'), '\\Current Sprint')"
+          },
+          {
+            "op": "add",
+            "path": "/fields/Custom.SubscriptionId",
+            "value": "@triggerBody()['subscriptionId']"
+          },
+          {
+            "op": "add",
+            "path": "/fields/Custom.BudgetAmount",
+            "value": "@triggerBody()['budgetAmount']"
+          },
+          {
+            "op": "add",
+            "path": "/fields/Custom.CurrentSpend",
+            "value": "@triggerBody()['currentSpend']"
+          }
+        ]
+      },
+      "runAfter": {
+        "Send_Email_Notification": [
+          "Succeeded",
+          "Failed"
+        ]
+      }
+    },
+    "Log_Alert_Event": {
+      "type": "Compose",
+      "inputs": {
+        "alertId": "@guid()",
+        "timestamp": "@utcNow()",
+        "budgetName": "@triggerBody()['budgetName']",
+        "subscriptionId": "@triggerBody()['subscriptionId']",
+        "subscriptionName": "@triggerBody()['subscriptionName']",
+        "currentSpend": "@triggerBody()['currentSpend']",
+        "budgetAmount": "@triggerBody()['budgetAmount']",
+        "threshold": "@triggerBody()['threshold']",
+        "severity": "@outputs('Calculate_Alert_Severity')",
+        "utilizationPercentage": "@div(mul(triggerBody()['currentSpend'], 100), triggerBody()['budgetAmount'])",
+        "actionRequired": "@variables('actionRequired')",
+        "teamsNotificationSent": "@equals(outputs('Send_Teams_Notification')['statusCode'], 200)",
+        "emailNotificationSent": "@equals(outputs('Send_Email_Notification')['statusCode'], 202)",
+        "workItemCreated": "@if(equals(outputs('Create_Azure_DevOps_Work_Item')['statusCode'], 200), true, false)"
+      },
+      "runAfter": {
+        "Create_Azure_DevOps_Work_Item": [
+          "Succeeded",
+          "Failed"
+        ]
+      }
+    }
+  },
+  "outputs": {
+    "alertProcessed": {
+      "type": "boolean",
+      "value": true
+    },
+    "alertId": {
+      "type": "string",
+      "value": "@outputs('Log_Alert_Event')['alertId']"
+    },
+    "severity": {
+      "type": "string",
+      "value": "@outputs('Calculate_Alert_Severity')"
+    },
+    "utilizationPercentage": {
+      "type": "number",
+      "value": "@outputs('Log_Alert_Event')['utilizationPercentage']"
+    }
+  }
+}

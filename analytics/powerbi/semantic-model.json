@@ -1,0 +1,907 @@
+{
+  "name": "Azure Cost Analytics Semantic Model",
+  "description": "Semantic model for Azure cost optimization and analytics platform",
+  "version": "1.0.0",
+  "tables": [
+    {
+      "name": "Date",
+      "columns": [
+        {
+          "name": "DateKey",
+          "dataType": "Int64",
+          "isHidden": false,
+          "isKey": true
+        },
+        {
+          "name": "Date",
+          "dataType": "DateTime",
+          "isHidden": false,
+          "formatString": "dd/mm/yyyy"
+        },
+        {
+          "name": "Year",
+          "dataType": "Int64",
+          "isHidden": false
+        },
+        {
+          "name": "Month",
+          "dataType": "Int64",
+          "isHidden": false
+        },
+        {
+          "name": "Quarter",
+          "dataType": "Int64",
+          "isHidden": false
+        },
+        {
+          "name": "YearMonth",
+          "dataType": "String",
+          "isHidden": false
+        },
+        {
+          "name": "YearQuarter",
+          "dataType": "String",
+          "isHidden": false
+        },
+        {
+          "name": "BillingPeriodStart",
+          "dataType": "DateTime",
+          "isHidden": false
+        },
+        {
+          "name": "BillingPeriodEnd",
+          "dataType": "DateTime",
+          "isHidden": false
+        }
+      ],
+      "measures": [],
+      "hierarchies": [
+        {
+          "name": "Date Hierarchy",
+          "levels": [
+            {
+              "name": "Year",
+              "column": "Year"
+            },
+            {
+              "name": "Quarter",
+              "column": "Quarter"
+            },
+            {
+              "name": "Month",
+              "column": "Month"
+            },
+            {
+              "name": "Date",
+              "column": "Date"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Resource",
+      "columns": [
+        {
+          "name": "ResourceKey",
+          "dataType": "Int64",
+          "isHidden": true,
+          "isKey": true
+        },
+        {
+          "name": "ResourceId",
+          "dataType": "String",
+          "isHidden": false
+        },
+        {
+          "name": "ResourceName",
+          "dataType": "String",
+          "isHidden": false
+        },
+        {
+          "name": "ResourceType",
+          "dataType": "String",
+          "isHidden": false
+        },
+        {
+          "name": "SubscriptionName",
+          "dataType": "String",
+          "isHidden": false
+        },
+        {
+          "name": "BusinessUnit",
+          "dataType": "String",
+          "isHidden": false
+        },
+        {
+          "name": "Team",
+          "dataType": "String",
+          "isHidden": false
+        },
+        {
+          "name": "CostCenter",
+          "dataType": "String",
+          "isHidden": false
+        },
+        {
+          "name": "Environment",
+          "dataType": "String",
+          "isHidden": false
+        },
+        {
+          "name": "Application",
+          "dataType": "String",
+          "isHidden": false
+        },
+        {
+          "name": "Location",
+          "dataType": "String",
+          "isHidden": false
+        }
+      ],
+      "measures": [],
+      "hierarchies": [
+        {
+          "name": "Resource Hierarchy",
+          "levels": [
+            {
+              "name": "BusinessUnit",
+              "column": "BusinessUnit"
+            },
+            {
+              "name": "Team",
+              "column": "Team"
+            },
+            {
+              "name": "Application",
+              "column": "Application"
+            },
+            {
+              "name": "ResourceName",
+              "column": "ResourceName"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Subscription",
+      "columns": [
+        {
+          "name": "SubscriptionKey",
+          "dataType": "Int64",
+          "isHidden": true,
+          "isKey": true
+        },
+        {
+          "name": "SubscriptionId",
+          "dataType": "String",
+          "isHidden": false
+        },
+        {
+          "name": "SubscriptionName",
+          "dataType": "String",
+          "isHidden": false
+        },
+        {
+          "name": "TenantId",
+          "dataType": "String",
+          "isHidden": true
+        },
+        {
+          "name": "BillingAccountName",
+          "dataType": "String",
+          "isHidden": false
+        },
+        {
+          "name": "Currency",
+          "dataType": "String",
+          "isHidden": false
+        },
+        {
+          "name": "IsActive",
+          "dataType": "Boolean",
+          "isHidden": false
+        }
+      ],
+      "measures": [],
+      "hierarchies": []
+    },
+    {
+      "name": "Cost",
+      "columns": [
+        {
+          "name": "DateKey",
+          "dataType": "Int64",
+          "isHidden": true,
+          "isKey": true
+        },
+        {
+          "name": "ResourceKey",
+          "dataType": "Int64",
+          "isHidden": true,
+          "isKey": true
+        },
+        {
+          "name": "SubscriptionKey",
+          "dataType": "Int64",
+          "isHidden": true,
+          "isKey": true
+        },
+        {
+          "name": "MeterKey",
+          "dataType": "Int64",
+          "isHidden": true,
+          "isKey": true
+        },
+        {
+          "name": "RegionKey",
+          "dataType": "Int64",
+          "isHidden": true,
+          "isKey": true
+        },
+        {
+          "name": "BillingPeriodStartDate",
+          "dataType": "DateTime",
+          "isHidden": false
+        },
+        {
+          "name": "BillingPeriodEndDate",
+          "dataType": "DateTime",
+          "isHidden": false
+        },
+        {
+          "name": "UsageQuantity",
+          "dataType": "Decimal",
+          "isHidden": false,
+          "formatString": "#,##0.00"
+        },
+        {
+          "name": "EffectivePrice",
+          "dataType": "Decimal",
+          "isHidden": false,
+          "formatString": "$#,##0.000000"
+        },
+        {
+          "name": "ActualCost",
+          "dataType": "Decimal",
+          "isHidden": false,
+          "formatString": "$#,##0.00"
+        },
+        {
+          "name": "AmortizedCost",
+          "dataType": "Decimal",
+          "isHidden": false,
+          "formatString": "$#,##0.00"
+        },
+        {
+          "name": "CostInUSD",
+          "dataType": "Decimal",
+          "isHidden": false,
+          "formatString": "$#,##0.00"
+        },
+        {
+          "name": "IsReservationCharge",
+          "dataType": "Boolean",
+          "isHidden": false
+        },
+        {
+          "name": "IsSavingsPlanCharge",
+          "dataType": "Boolean",
+          "isHidden": false
+        },
+        {
+          "name": "ChargeType",
+          "dataType": "String",
+          "isHidden": false
+        }
+      ],
+      "measures": [
+        {
+          "name": "Total Actual Cost",
+          "expression": "SUM(Cost[ActualCost])",
+          "formatString": "$#,##0.00",
+          "description": "Total actual cost in USD"
+        },
+        {
+          "name": "Total Amortized Cost",
+          "expression": "SUM(Cost[AmortizedCost])",
+          "formatString": "$#,##0.00",
+          "description": "Total amortized cost in USD"
+        },
+        {
+          "name": "Total Cost USD",
+          "expression": "SUM(Cost[CostInUSD])",
+          "formatString": "$#,##0.00",
+          "description": "Total cost in USD"
+        },
+        {
+          "name": "Total Usage Quantity",
+          "expression": "SUM(Cost[UsageQuantity])",
+          "formatString": "#,##0.00",
+          "description": "Total usage quantity"
+        },
+        {
+          "name": "Average Effective Price",
+          "expression": "AVERAGE(Cost[EffectivePrice])",
+          "formatString": "$#,##0.000000",
+          "description": "Average effective price"
+        },
+        {
+          "name": "Previous Month Cost",
+          "expression": "CALCULATE([Total Actual Cost], DATEADD('Date'[Date], -1, MONTH))",
+          "formatString": "$#,##0.00",
+          "description": "Previous month total cost"
+        },
+        {
+          "name": "Month over Month %",
+          "expression": "DIVIDE([Total Actual Cost] - [Previous Month Cost], [Previous Month Cost]) * 100",
+          "formatString": "0.00%",
+          "description": "Month over month percentage change"
+        },
+        {
+          "name": "Previous Year Cost",
+          "expression": "CALCULATE([Total Actual Cost], DATEADD('Date'[Date], -1, YEAR))",
+          "formatString": "$#,##0.00",
+          "description": "Previous year total cost"
+        },
+        {
+          "name": "Year over Year %",
+          "expression": "DIVIDE([Total Actual Cost] - [Previous Year Cost], [Previous Year Cost]) * 100",
+          "formatString": "0.00%",
+          "description": "Year over year percentage change"
+        },
+        {
+          "name": "Budget Amount",
+          "expression": "10000",
+          "formatString": "$#,##0.00",
+          "description": "Monthly budget amount (placeholder)"
+        },
+        {
+          "name": "Budget Remaining",
+          "expression": "[Budget Amount] - [Total Actual Cost]",
+          "formatString": "$#,##0.00",
+          "description": "Remaining budget"
+        },
+        {
+          "name": "Budget Utilization %",
+          "expression": "DIVIDE([Total Actual Cost], [Budget Amount]) * 100",
+          "formatString": "0.00%",
+          "description": "Budget utilization percentage"
+        },
+        {
+          "name": "Projected EOM Spend",
+          "expression": "VAR DaysElapsed = DAY(EOMONTH(TODAY(), 0)) - DAY(EOMONTH(TODAY(), -1))\nVAR DailyAvg = DIVIDE([Total Actual Cost], DAY(TODAY()))\nRETURN DailyAvg * DaysElapsed",
+          "formatString": "$#,##0.00",
+          "description": "Projected end of month spending"
+        },
+        {
+          "name": "Reservation Cost",
+          "expression": "CALCULATE([Total Actual Cost], Cost[IsReservationCharge] = TRUE())",
+          "formatString": "$#,##0.00",
+          "description": "Cost from reservations"
+        },
+        {
+          "name": "Savings Plan Cost",
+          "expression": "CALCULATE([Total Actual Cost], Cost[IsSavingsPlanCharge] = TRUE())",
+          "formatString": "$#,##0.00",
+          "description": "Cost from savings plans"
+        },
+        {
+          "name": "Reservation Coverage %",
+          "expression": "DIVIDE([Reservation Cost], [Total Actual Cost]) * 100",
+          "formatString": "0.00%",
+          "description": "Percentage of cost covered by reservations"
+        },
+        {
+          "name": "Savings Plan Coverage %",
+          "expression": "DIVIDE([Savings Plan Cost], [Total Actual Cost]) * 100",
+          "formatString": "0.00%",
+          "description": "Percentage of cost covered by savings plans"
+        },
+        {
+          "name": "Cost per Resource",
+          "expression": "DIVIDE([Total Actual Cost], DISTINCTCOUNT(Cost[ResourceKey]))",
+          "formatString": "$#,##0.00",
+          "description": "Average cost per resource"
+        },
+        {
+          "name": "Daily Z-Score",
+          "expression": "VAR Mean = AVERAGEX(VALUES('Date'[Date]), [Total Actual Cost])\nVAR Std = STDEVX.P(VALUES('Date'[Date]), [Total Actual Cost])\nRETURN DIVIDE([Total Actual Cost] - Mean, Std)",
+          "formatString": "0.00",
+          "description": "Statistical z-score for anomaly detection"
+        }
+      ],
+      "hierarchies": []
+    },
+    {
+      "name": "Utilization",
+      "columns": [
+        {
+          "name": "DateKey",
+          "dataType": "Int64",
+          "isHidden": true,
+          "isKey": true
+        },
+        {
+          "name": "ResourceKey",
+          "dataType": "Int64",
+          "isHidden": true,
+          "isKey": true
+        },
+        {
+          "name": "AvgCpuPercentage",
+          "dataType": "Decimal",
+          "isHidden": false,
+          "formatString": "0.00%"
+        },
+        {
+          "name": "MaxCpuPercentage",
+          "dataType": "Decimal",
+          "isHidden": false,
+          "formatString": "0.00%"
+        },
+        {
+          "name": "AvgMemoryPercentage",
+          "dataType": "Decimal",
+          "isHidden": false,
+          "formatString": "0.00%"
+        },
+        {
+          "name": "MaxMemoryPercentage",
+          "dataType": "Decimal",
+          "isHidden": false,
+          "formatString": "0.00%"
+        },
+        {
+          "name": "IdlePercentage",
+          "dataType": "Decimal",
+          "isHidden": false,
+          "formatString": "0.00%"
+        },
+        {
+          "name": "UptimeHours",
+          "dataType": "Decimal",
+          "isHidden": false,
+          "formatString": "#,##0.00"
+        },
+        {
+          "name": "AvailabilityPercentage",
+          "dataType": "Decimal",
+          "isHidden": false,
+          "formatString": "0.00%"
+        }
+      ],
+      "measures": [
+        {
+          "name": "Average CPU %",
+          "expression": "AVERAGE(Utilization[AvgCpuPercentage])",
+          "formatString": "0.00%",
+          "description": "Average CPU utilization percentage"
+        },
+        {
+          "name": "Average Memory %",
+          "expression": "AVERAGE(Utilization[AvgMemoryPercentage])",
+          "formatString": "0.00%",
+          "description": "Average memory utilization percentage"
+        },
+        {
+          "name": "Average Idle %",
+          "expression": "AVERAGE(Utilization[IdlePercentage])",
+          "formatString": "0.00%",
+          "description": "Average idle percentage"
+        },
+        {
+          "name": "Underutilized Resources",
+          "expression": "CALCULATE(DISTINCTCOUNT(Utilization[ResourceKey]), Utilization[AvgCpuPercentage] < 0.20)",
+          "formatString": "#,##0",
+          "description": "Count of underutilized resources"
+        },
+        {
+          "name": "Overutilized Resources",
+          "expression": "CALCULATE(DISTINCTCOUNT(Utilization[ResourceKey]), Utilization[AvgCpuPercentage] > 0.80)",
+          "formatString": "#,##0",
+          "description": "Count of overutilized resources"
+        },
+        {
+          "name": "Optimal Resources",
+          "expression": "CALCULATE(DISTINCTCOUNT(Utilization[ResourceKey]), Utilization[AvgCpuPercentage] >= 0.20 && Utilization[AvgCpuPercentage] <= 0.80)",
+          "formatString": "#,##0",
+          "description": "Count of optimally utilized resources"
+        }
+      ],
+      "hierarchies": []
+    },
+    {
+      "name": "Savings Opportunities",
+      "columns": [
+        {
+          "name": "DateKey",
+          "dataType": "Int64",
+          "isHidden": true,
+          "isKey": true
+        },
+        {
+          "name": "ResourceKey",
+          "dataType": "Int64",
+          "isHidden": true,
+          "isKey": true
+        },
+        {
+          "name": "RecommendationType",
+          "dataType": "String",
+          "isHidden": false
+        },
+        {
+          "name": "RecommendationDescription",
+          "dataType": "String",
+          "isHidden": false
+        },
+        {
+          "name": "PotentialMonthlySavings",
+          "dataType": "Decimal",
+          "isHidden": false,
+          "formatString": "$#,##0.00"
+        },
+        {
+          "name": "PotentialAnnualSavings",
+          "dataType": "Decimal",
+          "isHidden": false,
+          "formatString": "$#,##0.00"
+        },
+        {
+          "name": "RealizedMonthlySavings",
+          "dataType": "Decimal",
+          "isHidden": false,
+          "formatString": "$#,##0.00"
+        },
+        {
+          "name": "RealizedAnnualSavings",
+          "dataType": "Decimal",
+          "isHidden": false,
+          "formatString": "$#,##0.00"
+        },
+        {
+          "name": "Status",
+          "dataType": "String",
+          "isHidden": false
+        },
+        {
+          "name": "Priority",
+          "dataType": "String",
+          "isHidden": false
+        },
+        {
+          "name": "RecommendationDate",
+          "dataType": "DateTime",
+          "isHidden": false
+        },
+        {
+          "name": "ImplementationDate",
+          "dataType": "DateTime",
+          "isHidden": false
+        }
+      ],
+      "measures": [
+        {
+          "name": "Total Potential Monthly Savings",
+          "expression": "SUM('Savings Opportunities'[PotentialMonthlySavings])",
+          "formatString": "$#,##0.00",
+          "description": "Total potential monthly savings"
+        },
+        {
+          "name": "Total Potential Annual Savings",
+          "expression": "SUM('Savings Opportunities'[PotentialAnnualSavings])",
+          "formatString": "$#,##0.00",
+          "description": "Total potential annual savings"
+        },
+        {
+          "name": "Total Realized Monthly Savings",
+          "expression": "SUM('Savings Opportunities'[RealizedMonthlySavings])",
+          "formatString": "$#,##0.00",
+          "description": "Total realized monthly savings"
+        },
+        {
+          "name": "Total Realized Annual Savings",
+          "expression": "SUM('Savings Opportunities'[RealizedAnnualSavings])",
+          "formatString": "$#,##0.00",
+          "description": "Total realized annual savings"
+        },
+        {
+          "name": "Implementation Rate %",
+          "expression": "DIVIDE([Total Realized Monthly Savings], [Total Potential Monthly Savings]) * 100",
+          "formatString": "0.00%",
+          "description": "Implementation rate percentage"
+        },
+        {
+          "name": "Pending Opportunities",
+          "expression": "CALCULATE(COUNTROWS('Savings Opportunities'), 'Savings Opportunities'[Status] = \"Pending\")",
+          "formatString": "#,##0",
+          "description": "Count of pending opportunities"
+        },
+        {
+          "name": "High Priority Opportunities",
+          "expression": "CALCULATE(COUNTROWS('Savings Opportunities'), 'Savings Opportunities'[Priority] = \"High\")",
+          "formatString": "#,##0",
+          "description": "Count of high priority opportunities"
+        },
+        {
+          "name": "Completed Opportunities",
+          "expression": "CALCULATE(COUNTROWS('Savings Opportunities'), 'Savings Opportunities'[Status] = \"Completed\")",
+          "formatString": "#,##0",
+          "description": "Count of completed opportunities"
+        }
+      ],
+      "hierarchies": []
+    },
+    {
+      "name": "Anomalies",
+      "columns": [
+        {
+          "name": "DateKey",
+          "dataType": "Int64",
+          "isHidden": true,
+          "isKey": true
+        },
+        {
+          "name": "ResourceKey",
+          "dataType": "Int64",
+          "isHidden": true,
+          "isKey": true
+        },
+        {
+          "name": "SubscriptionKey",
+          "dataType": "Int64",
+          "isHidden": true,
+          "isKey": true
+        },
+        {
+          "name": "ActualCost",
+          "dataType": "Decimal",
+          "isHidden": false,
+          "formatString": "$#,##0.00"
+        },
+        {
+          "name": "ExpectedCost",
+          "dataType": "Decimal",
+          "isHidden": false,
+          "formatString": "$#,##0.00"
+        },
+        {
+          "name": "CostVariance",
+          "dataType": "Decimal",
+          "isHidden": false,
+          "formatString": "$#,##0.00"
+        },
+        {
+          "name": "VariancePercentage",
+          "dataType": "Decimal",
+          "isHidden": false,
+          "formatString": "0.00%"
+        },
+        {
+          "name": "ZScore",
+          "dataType": "Decimal",
+          "isHidden": false,
+          "formatString": "0.00"
+        },
+        {
+          "name": "AnomalyType",
+          "dataType": "String",
+          "isHidden": false
+        },
+        {
+          "name": "Severity",
+          "dataType": "String",
+          "isHidden": false
+        },
+        {
+          "name": "IsAnomaly",
+          "dataType": "Boolean",
+          "isHidden": false
+        }
+      ],
+      "measures": [
+        {
+          "name": "Total Anomalies",
+          "expression": "CALCULATE(COUNTROWS(Anomalies), Anomalies[IsAnomaly] = TRUE())",
+          "formatString": "#,##0",
+          "description": "Total number of anomalies detected"
+        },
+        {
+          "name": "High Severity Anomalies",
+          "expression": "CALCULATE(COUNTROWS(Anomalies), Anomalies[Severity] = \"High\" && Anomalies[IsAnomaly] = TRUE())",
+          "formatString": "#,##0",
+          "description": "Count of high severity anomalies"
+        },
+        {
+          "name": "Medium Severity Anomalies",
+          "expression": "CALCULATE(COUNTROWS(Anomalies), Anomalies[Severity] = \"Medium\" && Anomalies[IsAnomaly] = TRUE())",
+          "formatString": "#,##0",
+          "description": "Count of medium severity anomalies"
+        },
+        {
+          "name": "Low Severity Anomalies",
+          "expression": "CALCULATE(COUNTROWS(Anomalies), Anomalies[Severity] = \"Low\" && Anomalies[IsAnomaly] = TRUE())",
+          "formatString": "#,##0",
+          "description": "Count of low severity anomalies"
+        },
+        {
+          "name": "Total Cost Variance",
+          "expression": "SUM(Anomalies[CostVariance])",
+          "formatString": "$#,##0.00",
+          "description": "Total cost variance from anomalies"
+        },
+        {
+          "name": "Average Variance %",
+          "expression": "AVERAGE(Anomalies[VariancePercentage])",
+          "formatString": "0.00%",
+          "description": "Average variance percentage"
+        },
+        {
+          "name": "Max Z-Score",
+          "expression": "MAX(Anomalies[ZScore])",
+          "formatString": "0.00",
+          "description": "Maximum z-score detected"
+        }
+      ],
+      "hierarchies": []
+    }
+  ],
+  "relationships": [
+    {
+      "name": "Date to Cost",
+      "fromTable": "Date",
+      "fromColumn": "DateKey",
+      "toTable": "Cost",
+      "toColumn": "DateKey",
+      "crossFilteringBehavior": "OneDirection"
+    },
+    {
+      "name": "Resource to Cost",
+      "fromTable": "Resource",
+      "fromColumn": "ResourceKey",
+      "toTable": "Cost",
+      "toColumn": "ResourceKey",
+      "crossFilteringBehavior": "OneDirection"
+    },
+    {
+      "name": "Subscription to Cost",
+      "fromTable": "Subscription",
+      "fromColumn": "SubscriptionKey",
+      "toTable": "Cost",
+      "toColumn": "SubscriptionKey",
+      "crossFilteringBehavior": "OneDirection"
+    },
+    {
+      "name": "Date to Utilization",
+      "fromTable": "Date",
+      "fromColumn": "DateKey",
+      "toTable": "Utilization",
+      "toColumn": "DateKey",
+      "crossFilteringBehavior": "OneDirection"
+    },
+    {
+      "name": "Resource to Utilization",
+      "fromTable": "Resource",
+      "fromColumn": "ResourceKey",
+      "toTable": "Utilization",
+      "toColumn": "ResourceKey",
+      "crossFilteringBehavior": "OneDirection"
+    },
+    {
+      "name": "Date to Savings Opportunities",
+      "fromTable": "Date",
+      "fromColumn": "DateKey",
+      "toTable": "Savings Opportunities",
+      "toColumn": "DateKey",
+      "crossFilteringBehavior": "OneDirection"
+    },
+    {
+      "name": "Resource to Savings Opportunities",
+      "fromTable": "Resource",
+      "fromColumn": "ResourceKey",
+      "toTable": "Savings Opportunities",
+      "toColumn": "ResourceKey",
+      "crossFilteringBehavior": "OneDirection"
+    },
+    {
+      "name": "Date to Anomalies",
+      "fromTable": "Date",
+      "fromColumn": "DateKey",
+      "toTable": "Anomalies",
+      "toColumn": "DateKey",
+      "crossFilteringBehavior": "OneDirection"
+    },
+    {
+      "name": "Resource to Anomalies",
+      "fromTable": "Resource",
+      "fromColumn": "ResourceKey",
+      "toTable": "Anomalies",
+      "toColumn": "ResourceKey",
+      "crossFilteringBehavior": "OneDirection"
+    },
+    {
+      "name": "Subscription to Anomalies",
+      "fromTable": "Subscription",
+      "fromColumn": "SubscriptionKey",
+      "toTable": "Anomalies",
+      "toColumn": "SubscriptionKey",
+      "crossFilteringBehavior": "OneDirection"
+    }
+  ],
+  "rowLevelSecurity": {
+    "rules": [
+      {
+        "table": "Resource",
+        "expression": "Resource[BusinessUnit] = USERPRINCIPALNAME() || Resource[Team] = USERPRINCIPALNAME()",
+        "description": "Users can only see resources from their business unit or team"
+      },
+      {
+        "table": "Subscription",
+        "expression": "Subscription[SubscriptionName] IN (\"Dev\", \"Test\") || USERPRINCIPALNAME() IN (\"admin@company.com\")",
+        "description": "Non-admin users can only see Dev and Test subscriptions"
+      }
+    ]
+  },
+  "incrementalRefresh": {
+    "tables": [
+      {
+        "name": "Date",
+        "policy": {
+          "refreshType": "Incremental",
+          "lookbackPeriod": {
+            "type": "Months",
+            "count": 13
+          },
+          "refreshWindow": {
+            "type": "Days",
+            "count": 3
+          }
+        }
+      },
+      {
+        "name": "Cost",
+        "policy": {
+          "refreshType": "Incremental",
+          "lookbackPeriod": {
+            "type": "Months",
+            "count": 13
+          },
+          "refreshWindow": {
+            "type": "Days",
+            "count": 3
+          }
+        }
+      },
+      {
+        "name": "Utilization",
+        "policy": {
+          "refreshType": "Incremental",
+          "lookbackPeriod": {
+            "type": "Months",
+            "count": 3
+          },
+          "refreshWindow": {
+            "type": "Days",
+            "count": 1
+          }
+        }
+      },
+      {
+        "name": "Anomalies",
+        "policy": {
+          "refreshType": "Incremental",
+          "lookbackPeriod": {
+            "type": "Months",
+            "count": 3
+          },
+          "refreshWindow": {
+            "type": "Days",
+            "count": 1
+          }
+        }
+      }
+    ]
+  }
+}

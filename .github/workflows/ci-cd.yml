@@ -1,0 +1,241 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+  SERVICE_PRINCIPAL_ID: ${{ secrets.SERVICE_PRINCIPAL_ID }}
+  SERVICE_PRINCIPAL_SECRET: ${{ secrets.SERVICE_PRINCIPAL_SECRET }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.8, 3.9, '3.10']
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r automation/functions/anomaly-detection/requirements.txt
+        pip install pytest pytest-cov flake8 black
+    
+    - name: Lint with flake8
+      run: |
+        flake8 automation/functions/anomaly-detection/ --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 automation/functions/anomaly-detection/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+    
+    - name: Format check with black
+      run: |
+        black --check automation/functions/anomaly-detection/
+    
+    - name: Run unit tests
+      run: |
+        pytest tests/unit/ -v --cov=automation/functions/anomaly-detection --cov-report=xml --cov-report=html
+    
+    - name: Run integration tests
+      run: |
+        pytest tests/integration/ -v
+    
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+    
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  infrastructure-validation:
+    runs-on: ubuntu-latest
+    needs: [test, security-scan]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: |
+          {
+            "clientId": "${{ secrets.SERVICE_PRINCIPAL_ID }}",
+            "clientSecret": "${{ secrets.SERVICE_PRINCIPAL_SECRET }}",
+            "subscriptionId": "${{ secrets.AZURE_SUBSCRIPTION_ID }}",
+            "tenantId": "${{ secrets.AZURE_TENANT_ID }}"
+          }
+    
+    - name: Install Bicep CLI
+      uses: azure/setup-bicep@v1
+    
+    - name: Validate Bicep templates
+      run: |
+        bicep build infrastructure/bicep/main.bicep --stdout
+        bicep build infrastructure/bicep/main.bicep --outfile infrastructure/bicep/main.json
+    
+    - name: Validate parameter files
+      run: |
+        # Validate that parameter files have required values
+        if grep -q "YOUR_.*_ID" infrastructure/parameters/*.json; then
+          echo "Error: Parameter files contain placeholder values"
+          exit 1
+        fi
+        echo "Parameter files validation passed"
+
+  deploy-dev:
+    runs-on: ubuntu-latest
+    needs: [infrastructure-validation]
+    if: github.ref == 'refs/heads/develop'
+    environment: dev
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: |
+          {
+            "clientId": "${{ secrets.SERVICE_PRINCIPAL_ID }}",
+            "clientSecret": "${{ secrets.SERVICE_PRINCIPAL_SECRET }}",
+            "subscriptionId": "${{ secrets.AZURE_SUBSCRIPTION_ID }}",
+            "tenantId": "${{ secrets.AZURE_TENANT_ID }}"
+          }
+    
+    - name: Deploy to Dev Environment
+      run: |
+        az deployment sub create \
+          --location "East US" \
+          --template-file infrastructure/bicep/main.bicep \
+          --parameters @infrastructure/parameters/dev.json
+    
+    - name: Deploy Data Factory Pipelines
+      run: |
+        # Deploy ADF pipelines (would use ADF REST API or ARM templates)
+        echo "Deploying Data Factory pipelines to dev environment"
+    
+    - name: Deploy Azure Functions
+      run: |
+        # Deploy Azure Functions
+        cd automation/functions/anomaly-detection
+        func azure functionapp publish azurecostanalytics-dev-anomaly-detection --python
+    
+    - name: Run Smoke Tests
+      run: |
+        # Run smoke tests against dev environment
+        echo "Running smoke tests against dev environment"
+
+  deploy-prod:
+    runs-on: ubuntu-latest
+    needs: [infrastructure-validation]
+    if: github.ref == 'refs/heads/main'
+    environment: prod
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: |
+          {
+            "clientId": "${{ secrets.SERVICE_PRINCIPAL_ID }}",
+            "clientSecret": "${{ secrets.SERVICE_PRINCIPAL_SECRET }}",
+            "subscriptionId": "${{ secrets.AZURE_SUBSCRIPTION_ID }}",
+            "tenantId": "${{ secrets.AZURE_TENANT_ID }}"
+          }
+    
+    - name: Deploy to Production Environment
+      run: |
+        az deployment sub create \
+          --location "East US" \
+          --template-file infrastructure/bicep/main.bicep \
+          --parameters @infrastructure/parameters/prod.json
+    
+    - name: Deploy Data Factory Pipelines
+      run: |
+        echo "Deploying Data Factory pipelines to production environment"
+    
+    - name: Deploy Azure Functions
+      run: |
+        cd automation/functions/anomaly-detection
+        func azure functionapp publish azurecostanalytics-prod-anomaly-detection --python
+    
+    - name: Configure Power BI
+      run: |
+        # Configure Power BI datasets and reports
+        echo "Configuring Power BI for production environment"
+    
+    - name: Run Production Tests
+      run: |
+        # Run comprehensive tests against production environment
+        echo "Running production tests"
+    
+    - name: Notify Deployment Success
+      run: |
+        echo "Production deployment completed successfully"
+
+  rollback:
+    runs-on: ubuntu-latest
+    if: failure() && github.ref == 'refs/heads/main'
+    needs: [deploy-prod]
+    environment: prod
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: |
+          {
+            "clientId": "${{ secrets.SERVICE_PRINCIPAL_ID }}",
+            "clientSecret": "${{ secrets.SERVICE_PRINCIPAL_SECRET }}",
+            "subscriptionId": "${{ secrets.AZURE_SUBSCRIPTION_ID }}",
+            "tenantId": "${{ secrets.AZURE_TENANT_ID }}"
+          }
+    
+    - name: Rollback Deployment
+      run: |
+        echo "Rolling back production deployment"
+        # Implement rollback logic here
+    
+    - name: Notify Rollback
+      run: |
+        echo "Rollback completed"

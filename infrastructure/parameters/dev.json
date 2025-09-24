@@ -1,0 +1,33 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "value": "East US"
+    },
+    "environment": {
+      "value": "dev"
+    },
+    "projectName": {
+      "value": "azurecostanalytics"
+    },
+    "billingAccountId": {
+      "value": "YOUR_DEV_BILLING_ACCOUNT_ID"
+    },
+    "storageAccountSku": {
+      "value": "Standard_LRS"
+    },
+    "enablePrivateEndpoints": {
+      "value": false
+    },
+    "tags": {
+      "value": {
+        "Environment": "dev",
+        "Project": "AzureCostAnalytics",
+        "ManagedBy": "Bicep",
+        "CostCenter": "IT",
+        "Owner": "FinOps Team"
+      }
+    }
+  }
+}
